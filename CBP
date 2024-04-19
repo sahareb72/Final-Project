@@ -62,4 +62,14 @@ contract CrossBorderPayment {
         owner.transfer(amount);
     }
 
-    // Function to get the balance of
+    // Function to get the balance of a user
+    function getSenderBalance() external view returns (uint256) {
+        return balances[msg.sender];
+    }
+
+    // Function to calculate taxes based on a given amount and tax rate
+    function TaxRate(uint256 amount, uint256 tax) external pure returns (uint256) {
+        require(tax <= 100, "Tax rate must be less than or equal to 100");
+        return (amount * tax) / 100;
+    }
+}
