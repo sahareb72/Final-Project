@@ -1,0 +1,18 @@
+const { ethers } = require("hardhat");
+
+const deployCrossBorderPayment = async ({ deployments, getNamedAccounts }) => {
+  const { deploy } = deployments;
+  const { deployer } = await getNamedAccounts();
+
+  console.log("Deploying contracts with the account:", deployer);
+
+  const CrossBorderPayment = await deploy("CrossBorderPayment", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
+
+  console.log(`CrossBorderPayment deployed to: ${CrossBorderPayment.address}`);
+};
+
+module.exports.default = deployCrossBorderPayment;
