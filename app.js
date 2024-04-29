@@ -1,67 +1,51 @@
+//app.js
+
 const express = require('express');
-const { ethers } = require('ethers');
 require('dotenv').config();
+const ethers = require('ethers');
+console.log(ethers.providers); 
+const helmet = require('helmet');
+const connectDB = require('./mongo');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express();
-app.use(express.json());
+const port = process.env.PORT || 3001;
 
-const PORT = process.env.PORT || 3000;
+app.use(cors());
+app.use(bodyParser.json());
 
-// Initialize ethers provider using Infura
-const provider = new ethers.providers.JsonRpcProvider(process.env.INFURA_URL);
+app.get('/api/settlements', async (req, res) => {
+  const db = await connectDB();
+  const settlements = await db.collection('settlements').find({}).toArray();
+  res.json(settlements);
+});
 
-// Setup contract
-const contractAddress = process.env.CONTRACT_ADDRESS;
-const contractABI = require('./path_to_abi.json');  // Ensure you have ABI JSON file
+app.post('/api/settlement', async (req, res) => {
+  const db = await connectDB();
+  const result = await db.collection('settlements').insertOne(req.body);
+  res.json(result);
+});
+//const contractABI = require('/Users/saharbajgani/Documents/Blockchain/final.1/hardhat.config.js');  
+//const contractABI = require('./ignition/deployments/chain-11155111/artifacts/SimpleContractModule#SimpleContract.json').abi;
+//const contractABI = require('./SimpleContractModule#SimpleContract.json').abi;
+const contractABI = require('./deployments/sepolia/CBP.json').abi;
+const contractAddress = process.env.CONTRACT_ADDRESS; //'YOUR_DEPLOYED_CONTRACT_ADDRESS'
+
+//npm install console.log(ethers);
+const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
+//const provider = new ethers.JsonRpcProvider("http://localhost:8545");
 const contract = new ethers.Contract(contractAddress, contractABI, provider);
 
-// Add a wallet
-const privateKey = process.env.PRIVATE_KEY; // Your wallet private key
-const wallet = new ethers.Wallet(privateKey, provider);
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'none'"],
+      fontSrc: ["'self'"],
+      // Add other directives as needed
+    },
+  }));
 
-// Connected contract with signer
-const paymentContract = contract.connect(wallet);
-
-// KYC Verification route
-app.post('/verify-kyc', async (req, res) => {
-    const { userAddress } = req.body;
-    try {
-        const tx = await paymentContract.verifyKYC(userAddress);
-        await tx.wait();
-        res.json({ message: "KYC verified", txHash: tx.hash });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Deposit route
-app.post('/deposit', async (req, res) => {
-    const { amount } = req.body;  // Amount should be in ether
-    try {
-        const tx = await wallet.sendTransaction({
-            to: contractAddress,
-            value: ethers.utils.parseEther(amount)
-        });
-        await tx.wait();
-        res.json({ message: "Deposit successful", txHash: tx.hash });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Send payment route
-app.post('/send-payment', async (req, res) => {
-    const { recipient, amount, currency } = req.body;
-    try {
-        const tx = await paymentContract.sendPayment(recipient, ethers.utils.parseEther(amount), currency);
-        await tx.wait();
-        res.json({ message: "Payment sent", txHash: tx.hash });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`Backend running on http://localhost:${port}`);
 });
